@@ -36,26 +36,28 @@ app.get('/api/test-db', async (req, res) => {
 app.get('/api/items/:userId', async (req, res) => {
   try {
     console.log('>> GET /api/items', req.params);
-    const result = await db.query(
-  `SELECT id, item_name, quantity, notes, is_bought, created_at
-   FROM grocery_items
-   WHERE user_id = $1
-     AND (is_bought IS NULL OR is_bought = FALSE)
-     AND (notes IS NULL OR notes <> 'Quick buy')
-   ORDER BY created_at DESC`,
-  [req.params.userId]
-);
-res.json(result.rows);
 
-    res.json(rows);
+    const result = await db.query(
+      `SELECT id, item_name, quantity, notes, is_bought, created_at
+       FROM grocery_items
+       WHERE user_id = $1
+         AND (is_bought IS NULL OR is_bought = FALSE)
+         AND (notes IS NULL OR notes <> 'Quick buy')
+       ORDER BY created_at DESC`,
+      [req.params.userId]
+    );
+
+    res.json(result.rows);
   } catch (err) {
     console.error('GET /api/items/:userId error:', err);
-    res.status(500).json({ error: 'Database error' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Database error', detail: err.message });
+    }
   }
 });
 
 
-// ---------- Recommendations: Co-purchased items by frequency ----------
+/// ---------- Recommendations: Co-purchased items by frequency ----------
 app.get('/api/recommendations/:userId', async (req, res) => {
   const userId = parseInt(req.params.userId);
   if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
@@ -64,46 +66,44 @@ app.get('/api/recommendations/:userId', async (req, res) => {
     console.log(`📊 Generating co-purchase recommendations for user ${userId}`);
 
     const result = await db.query(
-  `
-  WITH recent_items AS (
-    SELECT DISTINCT item_name
-    FROM purchase_history
-    WHERE user_id = $1
-      AND purchased_on >= NOW() - INTERVAL '7 days'
-  ),
-  related_users AS (
-    SELECT DISTINCT ph.user_id
-    FROM purchase_history ph
-    JOIN recent_items ri ON ph.item_name = ri.item_name
-    WHERE ph.user_id <> $1
-  ),
-  co_purchases AS (
-    SELECT ph2.item_name
-    FROM purchase_history ph1
-    JOIN purchase_history ph2
-      ON ph1.user_id = ph2.user_id
-      AND DATE(ph1.purchased_on) = DATE(ph2.purchased_on)
-    WHERE ph1.item_name IN (SELECT item_name FROM recent_items)
-      AND ph1.user_id IN (SELECT user_id FROM related_users)
-      AND ph2.item_name NOT IN (SELECT item_name FROM recent_items)
-  )
-  SELECT item_name, COUNT(*) AS freq
-  FROM co_purchases
-  GROUP BY item_name
-  ORDER BY freq DESC
-  LIMIT 5;
-  `,
-  [userId]
-);
+      `
+      WITH recent_items AS (
+        SELECT DISTINCT item_name
+        FROM purchase_history
+        WHERE user_id = $1
+          AND purchased_on >= NOW() - INTERVAL '7 days'
+      ),
+      related_users AS (
+        SELECT DISTINCT ph.user_id
+        FROM purchase_history ph
+        JOIN recent_items ri ON ph.item_name = ri.item_name
+        WHERE ph.user_id <> $1
+      ),
+      co_purchases AS (
+        SELECT ph2.item_name
+        FROM purchase_history ph1
+        JOIN purchase_history ph2
+          ON ph1.user_id = ph2.user_id
+          AND DATE(ph1.purchased_on) = DATE(ph2.purchased_on)
+        WHERE ph1.item_name IN (SELECT item_name FROM recent_items)
+          AND ph1.user_id IN (SELECT user_id FROM related_users)
+          AND ph2.item_name NOT IN (SELECT item_name FROM recent_items)
+      )
+      SELECT item_name, COUNT(*) AS freq
+      FROM co_purchases
+      GROUP BY item_name
+      ORDER BY freq DESC
+      LIMIT 5;
+      `,
+      [userId]
+    );
 
-res.json(result.rows);
-
-
-    console.log('✅ Recommendations generated:', rows);
-    res.json(rows);
+    res.json(result.rows);
   } catch (err) {
-    console.error('❌ Recommendation error:', err.message, err.sqlMessage);
-    res.status(500).json({ error: err.message || 'Failed to generate recommendations' });
+    console.error('❌ Recommendation error:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || 'Failed to generate recommendations' });
+    }
   }
 });
 
@@ -113,21 +113,24 @@ res.json(result.rows);
 app.get('/api/history/:userId', async (req, res) => {
   try {
     console.log('>> GET /api/history', req.params);
-    const result = await db.query(
-  `SELECT item_name, purchased_on
-   FROM purchase_history
-   WHERE user_id = $1
-   ORDER BY purchased_on DESC`,
-  [req.params.userId]
-);
-res.json(result.rows);
 
-    res.json(rows);
+    const result = await db.query(
+      `SELECT item_name, purchased_on
+       FROM purchase_history
+       WHERE user_id = $1
+       ORDER BY purchased_on DESC`,
+      [req.params.userId]
+    );
+
+    res.json(result.rows);
   } catch (err) {
     console.error('GET /api/history/:userId error:', err);
-    res.status(500).json({ error: 'Database error' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Database error', detail: err.message });
+    }
   }
 });
+
 
 // ---------- LOGIN ----------
 app.post('/api/login', async (req, res) => {
