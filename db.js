@@ -1,11 +1,7 @@
-// config/database.js
-import dotenv from 'dotenv';
-import pkg from 'pg';
-const { Pool } = pkg;
+require('dotenv').config();
+const { Pool } = require('pg');
 
-dotenv.config();
-
-export const pool = new Pool({
+const pool = new Pool({
   connectionString: process.env.CONNECTION_STRING,
   ssl: { rejectUnauthorized: false },
 });
@@ -13,3 +9,8 @@ export const pool = new Pool({
 pool.connect()
   .then(() => console.log('✅ Connected to PostgreSQL database'))
   .catch(err => console.error('❌ Database connection error:', err.message));
+
+// ✅ Export an object with .query so db.query() works
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+};
