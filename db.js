@@ -1,25 +1,16 @@
-// db.js
 require('dotenv').config();
 const { Pool } = require('pg');
 
-// Initialize a PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: process.env.CONNECTION_STRING, // Railway/PostgreSQL env var
-  ssl: {
-    rejectUnauthorized: false, // required for Railway or other hosted PG
-  },
+  connectionString: process.env.CONNECTION_STRING,
+  ssl: { rejectUnauthorized: false },
 });
 
-// Test connection once on startup
 pool.connect()
-  .then(client => {
-    console.log('✅ Connected to PostgreSQL database');
-    client.release();
-  })
+  .then(() => console.log('✅ Connected to PostgreSQL database'))
   .catch(err => console.error('❌ Database connection error:', err.message));
 
-// Export both .query() and .connect() for flexibility
+// ✅ Export an object with .query so db.query() works
 module.exports = {
   query: (text, params) => pool.query(text, params),
-  connect: () => pool.connect(),
 };
