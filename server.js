@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 // Static files (serve /public/index.html, style.css, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
