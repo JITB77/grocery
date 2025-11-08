@@ -1,19 +1,21 @@
 {
   "name": "senior-capstone-project",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Smart Grocery App with PostgreSQL on Railway",
+  "main": "server.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed-db": "node seed-db.js",
+    "start": "node server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Your Name",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "mysql2": "^3.15.1",
     "pg": "^8.16.3"
   }
 }
