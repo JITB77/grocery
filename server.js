@@ -21,6 +21,9 @@ app.get("/", (req, res) => {
 
 // ---------- Health check ----------
 const db = require('./db'); // import your connection
+await db.query('SELECT * FROM users');
+const client = await db.connect();
+
 
 app.get('/api/test-db', async (req, res) => {
   try {
