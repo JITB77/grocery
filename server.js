@@ -275,7 +275,7 @@ app.post('/api/history', async (req, res) => {
 
 
 
-// ---------- Delete a grocery item ----------
+/// ---------- Delete a grocery item ----------
 app.delete('/api/items/:id', async (req, res) => {
   const idRaw = req.params.id;
   const userIdRaw = req.query.userId;
@@ -284,89 +284,116 @@ app.delete('/api/items/:id', async (req, res) => {
   const id = Number(idRaw);
   const userId = Number(userIdRaw);
 
+  // 🧩 Input validation
   if (!id || !userId) {
     console.error('Delete validation failed', { id, userId });
-    return res.status(400).json({ ok: false, error: 'id (param) and userId (query) are required' });
+    return res.status(400).json({
+      ok: false,
+      error: 'Both id (param) and userId (query) are required'
+    });
   }
 
   try {
-    const [result] = await db.query(
-      'DELETE FROM grocery_items WHERE id = ? AND user_id = ?',
+    // 🗑️ Perform the delete using PostgreSQL placeholders
+    const result = await db.query(
+      'DELETE FROM grocery_items WHERE id = $1 AND user_id = $2',
       [id, userId]
     );
-    console.log('DELETE result', result);
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ ok: false, error: 'Item not found (wrong id or userId)' });
+    console.log('DELETE result:', result.rowCount);
+
+    // 🚫 If no rows were deleted, the item doesn’t exist or doesn’t belong to the user
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Item not found (wrong id or userId)'
+      });
     }
 
-    res.json({ ok: true, message: 'Item deleted' });
+    // ✅ Successful deletion
+    res.json({ ok: true, message: 'Item deleted successfully' });
+
   } catch (err) {
     console.error('DELETE /api/items/:id error:', err);
-    res.status(500).json({ ok: false, error: err.message || 'Database error' });
+    res.status(500).json({
+      ok: false,
+      error: err.message || 'Database error while deleting item'
+    });
   }
 });
 
-// Mark item complete: move from grocery_items -> purchase_history
+
+// ---------- Mark item complete: move from grocery_items -> purchase_history ----------
 app.post('/api/items/:id/complete', async (req, res) => {
   const id = Number(req.params.id);
-  // Prefer body.user_id; fall back to query.userId for backward-compat
   const userId = Number(req.body?.user_id ?? req.query?.userId);
 
+  // 🧩 Input validation
   if (!Number.isInteger(id) || !Number.isInteger(userId) || id <= 0 || userId <= 0) {
-    return res.status(400).json({ ok: false, error: 'Invalid or missing item id / userId' });
+    return res.status(400).json({
+      ok: false,
+      error: 'Invalid or missing item id / userId'
+    });
   }
 
-  let conn;
-  try {
-    conn = await db.getConnection();
-    await conn.beginTransaction();
+  const client = await db.connect(); // PostgreSQL client connection
 
-    // Ensure user exists to avoid FK errors
-    const [u] = await conn.query(`SELECT id FROM users WHERE id = ?`, [userId]);
-    if (!u.length) {
-      await conn.rollback();
+  try {
+    await client.query('BEGIN'); // start transaction
+    console.log(`Processing complete request for user ${userId}, item ${id}`);
+
+    // ✅ Check if user exists
+    const userCheck = await client.query(`SELECT id FROM users WHERE id = $1`, [userId]);
+    if (userCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ ok: false, error: `User ${userId} does not exist` });
     }
 
-    // Fetch the item (and ensure it belongs to this user)
-    const [rows] = await conn.query(
-      `SELECT item_name FROM grocery_items WHERE id = ? AND user_id = ?`,
+    // ✅ Fetch the item
+    const itemRes = await client.query(
+      `SELECT item_name FROM grocery_items WHERE id = $1 AND user_id = $2`,
       [id, userId]
     );
-    if (!rows.length) {
-      await conn.rollback();
+
+    if (itemRes.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ ok: false, error: 'Item not found for this user' });
     }
 
-    const { item_name } = rows[0];
+    const { item_name } = itemRes.rows[0];
 
-    // Insert into purchase_history
-    await conn.query(
-      `INSERT INTO purchase_history (user_id, item_name) VALUES (?, ?)`,
+    // ✅ Insert into purchase_history
+    await client.query(
+      `INSERT INTO purchase_history (user_id, item_name)
+       VALUES ($1, $2)`,
       [userId, item_name]
     );
 
-    // Delete from grocery_items
-    const [del] = await conn.query(
-      `DELETE FROM grocery_items WHERE id = ? AND user_id = ?`,
+    // ✅ Delete from grocery_items
+    const deleteRes = await client.query(
+      `DELETE FROM grocery_items WHERE id = $1 AND user_id = $2`,
       [id, userId]
     );
 
-    if (del.affectedRows === 0) {
-      await conn.rollback();
+    if (deleteRes.rowCount === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ ok: false, error: 'Delete failed: item disappeared' });
     }
 
-    await conn.commit();
+    await client.query('COMMIT'); // finalize transaction
+
+    console.log(`✅ Item ${id} completed for user ${userId}`);
     res.json({ ok: true, message: 'Item completed and moved to history' });
+
   } catch (err) {
-    if (conn) await conn.rollback();
+    await client.query('ROLLBACK'); // undo if error
     console.error('POST /api/items/:id/complete error:', err);
-    // Surface MySQL errno to help debugging if needed
-    res.status(500).json({ ok: false, error: err.message || 'Database error', errno: err.errno });
+    res.status(500).json({
+      ok: false,
+      error: err.message || 'Database error during item completion'
+    });
   } finally {
-    if (conn) conn.release();
+    client.release(); // always release client back to pool
   }
 });
 
