@@ -4,8 +4,11 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 
+
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+
 
 // Static files (serve /public/index.html, style.css, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -15,8 +18,9 @@ app.get("/", (req, res) => {
   res.redirect("/login.html");
 });
 
+
 // ---------- Health check ----------
-const db = require('./db'); // import your PostgreSQL pool
+const db = require('./db'); // import your connection
 
 app.get('/api/test-db', async (req, res) => {
   try {
@@ -32,21 +36,22 @@ app.get('/api/test-db', async (req, res) => {
 app.get('/api/items/:userId', async (req, res) => {
   try {
     console.log('>> GET /api/items', req.params);
-    const result = await db.query(
+    const [rows] = await db.query(
       `SELECT id, item_name, quantity, notes, is_bought, created_at
        FROM grocery_items
-       WHERE user_id = $1
-         AND (is_bought IS NULL OR is_bought = FALSE)
+       WHERE user_id = ?
+         AND (is_bought IS NULL OR is_bought = FALSE OR is_bought = 0)
          AND (notes IS NULL OR notes <> 'Quick buy')
        ORDER BY created_at DESC`,
       [req.params.userId]
     );
-    res.json(result.rows);
+    res.json(rows);
   } catch (err) {
     console.error('GET /api/items/:userId error:', err);
     res.status(500).json({ error: 'Database error' });
   }
 });
+
 
 // ---------- Recommendations: Co-purchased items by frequency ----------
 app.get('/api/recommendations/:userId', async (req, res) => {
@@ -56,19 +61,19 @@ app.get('/api/recommendations/:userId', async (req, res) => {
   try {
     console.log(`📊 Generating co-purchase recommendations for user ${userId}`);
 
-    const result = await db.query(
+    const [rows] = await db.query(
       `
       WITH recent_items AS (
         SELECT DISTINCT item_name
         FROM purchase_history
-        WHERE user_id = $1
-          AND purchased_on >= NOW() - INTERVAL '7 days'
+        WHERE user_id = ?
+          AND purchased_on >= DATE_SUB(NOW(), INTERVAL 7 DAY)
       ),
       related_users AS (
         SELECT DISTINCT ph.user_id
         FROM purchase_history ph
         JOIN recent_items ri ON ph.item_name = ri.item_name
-        WHERE ph.user_id <> $1
+        WHERE ph.user_id <> ?
       ),
       co_purchases AS (
         SELECT ph2.item_name
@@ -86,29 +91,31 @@ app.get('/api/recommendations/:userId', async (req, res) => {
       ORDER BY freq DESC
       LIMIT 5;
       `,
-      [userId]
+      [userId, userId]
     );
 
-    console.log('✅ Recommendations generated:', result.rows);
-    res.json(result.rows);
+    console.log('✅ Recommendations generated:', rows);
+    res.json(rows);
   } catch (err) {
-    console.error('❌ Recommendation error:', err.message);
+    console.error('❌ Recommendation error:', err.message, err.sqlMessage);
     res.status(500).json({ error: err.message || 'Failed to generate recommendations' });
   }
 });
+
+
 
 // ---------- Read purchase history for a user ----------
 app.get('/api/history/:userId', async (req, res) => {
   try {
     console.log('>> GET /api/history', req.params);
-    const result = await db.query(
+    const [rows] = await db.query(
       `SELECT item_name, purchased_on
        FROM purchase_history
-       WHERE user_id = $1
+       WHERE user_id = ?
        ORDER BY purchased_on DESC`,
       [req.params.userId]
     );
-    res.json(result.rows);
+    res.json(rows);
   } catch (err) {
     console.error('GET /api/history/:userId error:', err);
     res.status(500).json({ error: 'Database error' });
@@ -126,11 +133,11 @@ app.post('/api/login', async (req, res) => {
   try {
     console.log('Login attempt:', email);
 
-    const result = await db.query(
-      'SELECT id, name, password_hash FROM users WHERE email = $1',
+    // Fetch user with hashed password
+    const [rows] = await db.query(
+      'SELECT id, name, password_hash FROM users WHERE email = ?',
       [email]
     );
-    const rows = result.rows;
 
     if (rows.length === 0) {
       console.log('Invalid credentials: no such user');
@@ -164,20 +171,21 @@ app.post('/api/items', async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const [result] = await db.query(
       `INSERT INTO grocery_items (user_id, item_name, quantity, notes)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id`,
+       VALUES (?, ?, ?, ?)`,
       [user_id, name, quantity || null, (notes && notes.trim()) || null]
     );
-    res.json({ message: 'Item added successfully', id: result.rows[0].id });
+    res.json({ message: 'Item added successfully', id: result.insertId });
   } catch (err) {
     console.error('POST /api/items error:', err);
     res.status(500).json({ error: err.message || 'Database error' });
   }
 });
 
-// ------------- Send registration form --------------- //
+
+// ------------- Send regustration form --------------- //
+
 app.post('/api/register', async (req, res) => {
   const { name, email, password } = req.body || {};
 
@@ -186,21 +194,21 @@ app.post('/api/register', async (req, res) => {
   }
 
   try {
-    const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
+    // Check if user already exists
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
       return res.status(400).json({ error: 'Email is already registered' });
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(password, 10); // 🔐 Hash the password
 
-    const result = await db.query(
+    const [result] = await db.query(
       `INSERT INTO users (name, email, password_hash)
-       VALUES ($1, $2, $3)
-       RETURNING id`,
+       VALUES (?, ?, ?)`,
       [name, email, password_hash]
     );
 
-    res.json({ message: 'User registered', id: result.rows[0].id });
+    res.json({ message: 'User registered', id: result.insertId });
   } catch (err) {
     console.error('POST /api/register error:', err);
     res.status(500).json({ error: 'Database error during registration', detail: err.message });
@@ -218,13 +226,28 @@ app.post('/api/history', async (req, res) => {
   }
 
   try {
-    await db.query(`INSERT INTO purchase_history (user_id, item_name) VALUES ($1, $2)`, [user_id, name]);
-    res.json({ message: 'Purchase recorded' });
+    // Ensure the user exists to avoid FK error 1452
+    const [u] = await db.query(`SELECT id FROM users WHERE id = ?`, [user_id]);
+    if (!u.length) {
+      return res.status(400).json({ error: `User ${user_id} does not exist` });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO purchase_history (user_id, item_name) VALUES (?, ?)`,
+      [user_id, name]
+    );
+    res.json({ message: 'Purchase recorded', id: result.insertId });
   } catch (err) {
     console.error('POST /api/history error:', err);
+    // MySQL FK error code: 1452
+    if (err && err.errno === 1452) {
+      return res.status(400).json({ error: 'Foreign key constraint: user_id not found in users' });
+    }
     res.status(500).json({ error: err.message || 'Database error' });
   }
 });
+
+
 
 // ---------- Delete a grocery item ----------
 app.delete('/api/items/:id', async (req, res) => {
@@ -241,12 +264,13 @@ app.delete('/api/items/:id', async (req, res) => {
   }
 
   try {
-    const result = await db.query(
-      'DELETE FROM grocery_items WHERE id = $1 AND user_id = $2',
+    const [result] = await db.query(
+      'DELETE FROM grocery_items WHERE id = ? AND user_id = ?',
       [id, userId]
     );
+    console.log('DELETE result', result);
 
-    if (result.rowCount === 0) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({ ok: false, error: 'Item not found (wrong id or userId)' });
     }
 
@@ -257,35 +281,73 @@ app.delete('/api/items/:id', async (req, res) => {
   }
 });
 
-// ---------- Mark item complete ----------
+// Mark item complete: move from grocery_items -> purchase_history
 app.post('/api/items/:id/complete', async (req, res) => {
   const id = Number(req.params.id);
+  // Prefer body.user_id; fall back to query.userId for backward-compat
   const userId = Number(req.body?.user_id ?? req.query?.userId);
 
   if (!Number.isInteger(id) || !Number.isInteger(userId) || id <= 0 || userId <= 0) {
     return res.status(400).json({ ok: false, error: 'Invalid or missing item id / userId' });
   }
 
+  let conn;
   try {
-    const item = await db.query(`SELECT item_name FROM grocery_items WHERE id = $1 AND user_id = $2`, [id, userId]);
-    if (item.rows.length === 0) {
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    // Ensure user exists to avoid FK errors
+    const [u] = await conn.query(`SELECT id FROM users WHERE id = ?`, [userId]);
+    if (!u.length) {
+      await conn.rollback();
+      return res.status(400).json({ ok: false, error: `User ${userId} does not exist` });
+    }
+
+    // Fetch the item (and ensure it belongs to this user)
+    const [rows] = await conn.query(
+      `SELECT item_name FROM grocery_items WHERE id = ? AND user_id = ?`,
+      [id, userId]
+    );
+    if (!rows.length) {
+      await conn.rollback();
       return res.status(404).json({ ok: false, error: 'Item not found for this user' });
     }
 
-    const { item_name } = item.rows[0];
+    const { item_name } = rows[0];
 
-    await db.query(`INSERT INTO purchase_history (user_id, item_name) VALUES ($1, $2)`, [userId, item_name]);
-    await db.query(`DELETE FROM grocery_items WHERE id = $1 AND user_id = $2`, [id, userId]);
+    // Insert into purchase_history
+    await conn.query(
+      `INSERT INTO purchase_history (user_id, item_name) VALUES (?, ?)`,
+      [userId, item_name]
+    );
 
+    // Delete from grocery_items
+    const [del] = await conn.query(
+      `DELETE FROM grocery_items WHERE id = ? AND user_id = ?`,
+      [id, userId]
+    );
+
+    if (del.affectedRows === 0) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, error: 'Delete failed: item disappeared' });
+    }
+
+    await conn.commit();
     res.json({ ok: true, message: 'Item completed and moved to history' });
   } catch (err) {
+    if (conn) await conn.rollback();
     console.error('POST /api/items/:id/complete error:', err);
-    res.status(500).json({ ok: false, error: err.message || 'Database error' });
+    // Surface MySQL errno to help debugging if needed
+    res.status(500).json({ ok: false, error: err.message || 'Database error', errno: err.errno });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
-// ---------- Start ----------
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on 0.0.0.0:${PORT}`);
-});
 
+
+
+// ---------- Start ----------
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
