@@ -36,15 +36,17 @@ app.get('/api/test-db', async (req, res) => {
 app.get('/api/items/:userId', async (req, res) => {
   try {
     console.log('>> GET /api/items', req.params);
-    const [rows] = await db.query(
-      `SELECT id, item_name, quantity, notes, is_bought, created_at
-       FROM grocery_items
-       WHERE user_id = ?
-         AND (is_bought IS NULL OR is_bought = FALSE OR is_bought = 0)
-         AND (notes IS NULL OR notes <> 'Quick buy')
-       ORDER BY created_at DESC`,
-      [req.params.userId]
-    );
+    const result = await db.query(
+  `SELECT id, item_name, quantity, notes, is_bought, created_at
+   FROM grocery_items
+   WHERE user_id = $1
+     AND (is_bought IS NULL OR is_bought = FALSE)
+     AND (notes IS NULL OR notes <> 'Quick buy')
+   ORDER BY created_at DESC`,
+  [req.params.userId]
+);
+res.json(result.rows);
+
     res.json(rows);
   } catch (err) {
     console.error('GET /api/items/:userId error:', err);
@@ -61,38 +63,41 @@ app.get('/api/recommendations/:userId', async (req, res) => {
   try {
     console.log(`📊 Generating co-purchase recommendations for user ${userId}`);
 
-    const [rows] = await db.query(
-      `
-      WITH recent_items AS (
-        SELECT DISTINCT item_name
-        FROM purchase_history
-        WHERE user_id = ?
-          AND purchased_on >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-      ),
-      related_users AS (
-        SELECT DISTINCT ph.user_id
-        FROM purchase_history ph
-        JOIN recent_items ri ON ph.item_name = ri.item_name
-        WHERE ph.user_id <> ?
-      ),
-      co_purchases AS (
-        SELECT ph2.item_name
-        FROM purchase_history ph1
-        JOIN purchase_history ph2
-          ON ph1.user_id = ph2.user_id
-          AND DATE(ph1.purchased_on) = DATE(ph2.purchased_on)
-        WHERE ph1.item_name IN (SELECT item_name FROM recent_items)
-          AND ph1.user_id IN (SELECT user_id FROM related_users)
-          AND ph2.item_name NOT IN (SELECT item_name FROM recent_items)
-      )
-      SELECT item_name, COUNT(*) AS freq
-      FROM co_purchases
-      GROUP BY item_name
-      ORDER BY freq DESC
-      LIMIT 5;
-      `,
-      [userId, userId]
-    );
+    const result = await db.query(
+  `
+  WITH recent_items AS (
+    SELECT DISTINCT item_name
+    FROM purchase_history
+    WHERE user_id = $1
+      AND purchased_on >= NOW() - INTERVAL '7 days'
+  ),
+  related_users AS (
+    SELECT DISTINCT ph.user_id
+    FROM purchase_history ph
+    JOIN recent_items ri ON ph.item_name = ri.item_name
+    WHERE ph.user_id <> $1
+  ),
+  co_purchases AS (
+    SELECT ph2.item_name
+    FROM purchase_history ph1
+    JOIN purchase_history ph2
+      ON ph1.user_id = ph2.user_id
+      AND DATE(ph1.purchased_on) = DATE(ph2.purchased_on)
+    WHERE ph1.item_name IN (SELECT item_name FROM recent_items)
+      AND ph1.user_id IN (SELECT user_id FROM related_users)
+      AND ph2.item_name NOT IN (SELECT item_name FROM recent_items)
+  )
+  SELECT item_name, COUNT(*) AS freq
+  FROM co_purchases
+  GROUP BY item_name
+  ORDER BY freq DESC
+  LIMIT 5;
+  `,
+  [userId]
+);
+
+res.json(result.rows);
+
 
     console.log('✅ Recommendations generated:', rows);
     res.json(rows);
@@ -108,13 +113,15 @@ app.get('/api/recommendations/:userId', async (req, res) => {
 app.get('/api/history/:userId', async (req, res) => {
   try {
     console.log('>> GET /api/history', req.params);
-    const [rows] = await db.query(
-      `SELECT item_name, purchased_on
-       FROM purchase_history
-       WHERE user_id = ?
-       ORDER BY purchased_on DESC`,
-      [req.params.userId]
-    );
+    const result = await db.query(
+  `SELECT item_name, purchased_on
+   FROM purchase_history
+   WHERE user_id = $1
+   ORDER BY purchased_on DESC`,
+  [req.params.userId]
+);
+res.json(result.rows);
+
     res.json(rows);
   } catch (err) {
     console.error('GET /api/history/:userId error:', err);
@@ -134,17 +141,18 @@ app.post('/api/login', async (req, res) => {
     console.log('Login attempt:', email);
 
     // Fetch user with hashed password
-    const [rows] = await db.query(
-      'SELECT id, name, password_hash FROM users WHERE email = ?',
-      [email]
-    );
+    const result = await db.query(
+  'SELECT id, name, password_hash FROM users WHERE email = $1',
+  [email]
+);
 
-    if (rows.length === 0) {
-      console.log('Invalid credentials: no such user');
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
+if (result.rows.length === 0) {
+  console.log('Invalid credentials: no such user');
+  return res.status(401).json({ error: 'Invalid email or password' });
+}
 
-    const user = rows[0];
+const user = result.rows[0];
+
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
@@ -171,12 +179,14 @@ app.post('/api/items', async (req, res) => {
   }
 
   try {
-    const [result] = await db.query(
-      `INSERT INTO grocery_items (user_id, item_name, quantity, notes)
-       VALUES (?, ?, ?, ?)`,
-      [user_id, name, quantity || null, (notes && notes.trim()) || null]
-    );
-    res.json({ message: 'Item added successfully', id: result.insertId });
+    const result = await db.query(
+  `INSERT INTO grocery_items (user_id, item_name, quantity, notes)
+   VALUES ($1, $2, $3, $4)
+   RETURNING id`,
+  [user_id, name, quantity || null, (notes && notes.trim()) || null]
+);
+res.json({ message: 'Item added successfully', id: result.rows[0].id });
+
   } catch (err) {
     console.error('POST /api/items error:', err);
     res.status(500).json({ error: err.message || 'Database error' });
@@ -184,68 +194,84 @@ app.post('/api/items', async (req, res) => {
 });
 
 
-// ------------- Send regustration form --------------- //
-
+// ------------- Register a new user --------------- //
 app.post('/api/register', async (req, res) => {
   const { name, email, password } = req.body || {};
 
   if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email and password are required' });
+    return res.status(400).json({ error: 'Name, email, and password are required' });
   }
 
   try {
     // Check if user already exists
-    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
+    const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Email is already registered' });
     }
 
-    const password_hash = await bcrypt.hash(password, 10); // 🔐 Hash the password
+    // Hash password
+    const password_hash = await bcrypt.hash(password, 10);
 
-    const [result] = await db.query(
+    // Insert new user and return ID
+    const result = await db.query(
       `INSERT INTO users (name, email, password_hash)
-       VALUES (?, ?, ?)`,
+       VALUES ($1, $2, $3)
+       RETURNING id`,
       [name, email, password_hash]
     );
 
-    res.json({ message: 'User registered', id: result.insertId });
+    res.json({ message: 'User registered successfully', id: result.rows[0].id });
   } catch (err) {
     console.error('POST /api/register error:', err);
-    res.status(500).json({ error: 'Database error during registration', detail: err.message });
+    res.status(500).json({
+      error: 'Database error during registration',
+      detail: err.message
+    });
   }
 });
+
 
 // ---------- Create a purchase history record (Quick Buy mirror) ----------
 app.post('/api/history', async (req, res) => {
   console.log('>> POST /api/history', req.body);
+
   const { user_id, item_name } = req.body || {};
   const name = (item_name || '').trim();
 
+  // 🧩 Validate input
   if (!user_id || !name) {
     return res.status(400).json({ error: 'user_id and item_name are required' });
   }
 
   try {
-    // Ensure the user exists to avoid FK error 1452
-    const [u] = await db.query(`SELECT id FROM users WHERE id = ?`, [user_id]);
-    if (!u.length) {
+    // 🧠 Ensure the user exists first (avoid foreign key violation)
+    const userCheck = await db.query(`SELECT id FROM users WHERE id = $1`, [user_id]);
+    if (userCheck.rows.length === 0) {
       return res.status(400).json({ error: `User ${user_id} does not exist` });
     }
 
-    const [result] = await db.query(
-      `INSERT INTO purchase_history (user_id, item_name) VALUES (?, ?)`,
+    // 📝 Insert the purchase into purchase_history
+    const result = await db.query(
+      `INSERT INTO purchase_history (user_id, item_name)
+       VALUES ($1, $2)
+       RETURNING id`,
       [user_id, name]
     );
-    res.json({ message: 'Purchase recorded', id: result.insertId });
+
+    // ✅ Send back a confirmation
+    res.json({
+      message: 'Purchase recorded successfully',
+      id: result.rows[0].id
+    });
+
   } catch (err) {
     console.error('POST /api/history error:', err);
-    // MySQL FK error code: 1452
-    if (err && err.errno === 1452) {
-      return res.status(400).json({ error: 'Foreign key constraint: user_id not found in users' });
-    }
-    res.status(500).json({ error: err.message || 'Database error' });
+    res.status(500).json({
+      error: err.message || 'Database error while recording purchase'
+    });
   }
 });
+
 
 
 
