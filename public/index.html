@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Grocery List Website</title>
+  <link rel="stylesheet" href="style.css" />
+
+</head>
+<body>
+  <!-- Header -->
+  <header class="topbar">
+    <div class="container">
+      <h1 class="brand">Smart Grocery List</h1>
+      <nav class="auth-area"></nav>
+    </div> 
+  </header>
+
+  <!-- Main Grid -->
+  <main class="container main-grid">
+    <!-- Left Column: Add & Recommendations -->
+    <section class="card">
+      <h2>Add Item</h2>
+
+      <!-- Name + Choose Item button -->
+      <div class="form-row inline-actions">
+        <input id="itemName" type="text" placeholder="Item name (e.g., Milk)">
+        <button id="chooseItemBtn" type="button" class="btn small">Choose Item</button>
+      </div>
+
+      <div class="form-row">
+        <input id="quantity" type="text" placeholder="Qty (optional)">
+      </div>
+      <textarea id="notes" placeholder="Notes (brand, package size)..."></textarea>
+      <div class="btn-row">
+        <button id="addBtn" type="button" class="btn primary">Add to List</button>
+        <button id="quickBuyBtn" type="button" class="btn">Quick Buy</button>
+      </div>
+
+      <hr>
+
+      <h3>Recommendations</h3>
+      <div class="recs-list" id="recommendations"></div>
+    </section>
+
+    <!-- Middle Column: Current List -->
+    <section class="card">
+      <h2>Your Grocery List</h2>
+      <ul class="grocery-list"></ul>
+    </section>
+
+    <!-- Right Column: Purchase History -->
+    <section class="card">
+      <h2>Purchase History</h2>
+      <ul class="history-list"></ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 Smart Grocery List Website</p>
+  </footer>
+
+  <!-- Choose Item Modal -->
+  <div id="itemModal" class="modal" aria-hidden="true">
+  <div class="modal-content">
+    <span class="modal-close" title="Close">&times;</span>
+    <div class="modal-header">
+      <h3 style="display:inline-block; margin-right:10px;">Select an Item</h3>
+      <input 
+        type="text" 
+        id="itemSearch" 
+        placeholder="Search items..." 
+        style="padding:6px 8px; border:1px solid #ccc; border-radius:8px; width:180px;"
+      >
+    </div>
+    <div class="item-grid">
+      
+       
+        <!-- Dairy & Breakfast -->
+  <div class="item-card" data-name="Milk"><img src="images/milk.jpg" alt="Milk"><span>Milk</span></div>
+  <div class="item-card" data-name="Eggs"><img src="images/eggs.jpg" alt="Eggs"><span>Eggs</span></div>
+  <div class="item-card" data-name="Butter"><img src="images/butter.jpg" alt="Butter"><span>Butter</span></div>
+  <div class="item-card" data-name="Cheese"><img src="images/cheese.jpg" alt="Cheese"><span>Cheese</span></div>
+  <div class="item-card" data-name="Yogurt"><img src="images/yogurt.jpg" alt="Yogurt"><span>Yogurt</span></div>
+  <div class="item-card" data-name="Cream"><img src="images/cream.jpg" alt="Cream"><span>Cream</span></div>
+  <div class="item-card" data-name="Bread"><img src="images/bread.jpg" alt="Bread"><span>Bread</span></div>
+  <div class="item-card" data-name="Bagels"><img src="images/bagels.jpg" alt="Bagels"><span>Bagels</span></div>
+  <div class="item-card" data-name="Cereal"><img src="images/cereal.jpg" alt="Cereal"><span>Cereal</span></div>
+  <div class="item-card" data-name="Oats"><img src="images/oats.jpg" alt="Oats"><span>Oats</span></div>
+
+  <!-- Produce -->
+  <div class="item-card" data-name="Apples"><img src="images/apples.jpg" alt="Apples"><span>Apples</span></div>
+  <div class="item-card" data-name="Bananas"><img src="images/bananas.jpg" alt="Bananas"><span>Bananas</span></div>
+  <div class="item-card" data-name="Oranges"><img src="images/oranges.jpeg" alt="Oranges"><span>Oranges</span></div>
+  <div class="item-card" data-name="Grapes"><img src="images/grapes.jpg" alt="Grapes"><span>Grapes</span></div>
+  <div class="item-card" data-name="Tomatoes"><img src="images/tomatoes.jpg" alt="Tomatoes"><span>Tomatoes</span></div>
+  <div class="item-card" data-name="Onions"><img src="images/onions.jpg" alt="Onions"><span>Onions</span></div>
+  <div class="item-card" data-name="Garlic"><img src="images/garlic.jpg" alt="Garlic"><span>Garlic</span></div>
+  <div class="item-card" data-name="Potatoes"><img src="images/potatoes.jpg" alt="Potatoes"><span>Potatoes</span></div>
+  <div class="item-card" data-name="Carrots"><img src="images/carrots.jpg" alt="Carrots"><span>Carrots</span></div>
+  <div class="item-card" data-name="Lettuce"><img src="images/lettuce.jpeg" alt="Lettuce"><span>Lettuce</span></div>
+  <div class="item-card" data-name="Spinach"><img src="images/spinach.jpeg" alt="Spinach"><span>Spinach</span></div>
+  <div class="item-card" data-name="Broccoli"><img src="images/broccoli.jpeg" alt="Broccoli"><span>Broccoli</span></div>
+  <div class="item-card" data-name="Cucumbers"><img src="images/cucumbers.jpeg" alt="Cucumbers"><span>Cucumbers</span></div>
+  <div class="item-card" data-name="Peppers"><img src="images/peppers.jpeg" alt="Peppers"><span>Peppers</span></div>
+  <div class="item-card" data-name="Lemons"><img src="images/lemons.jpeg" alt="Lemons"><span>Lemons</span></div>
+
+  <!-- Meat, Fish & Protein -->
+  <div class="item-card" data-name="Chicken"><img src="images/chicken.jpeg" alt="Chicken"><span>Chicken</span></div>
+  <div class="item-card" data-name="Beef"><img src="images/beef.jpg" alt="Beef"><span>Beef</span></div>
+  <div class="item-card" data-name="Pork"><img src="images/pork.jpg" alt="Pork"><span>Pork</span></div>
+  <div class="item-card" data-name="Fish"><img src="images/fish.jpg" alt="Fish"><span>Fish</span></div>
+  <div class="item-card" data-name="Shrimp"><img src="images/shrimp.jpg" alt="Shrimp"><span>Shrimp</span></div>
+  <div class="item-card" data-name="Tofu"><img src="images/tofu.jpg" alt="Tofu"><span>Tofu</span></div>
+
+  <!-- Pantry -->
+  <div class="item-card" data-name="Rice"><img src="images/rice.jpg" alt="Rice"><span>Rice</span></div>
+  <div class="item-card" data-name="Pasta"><img src="images/pasta.jpg" alt="Pasta"><span>Pasta</span></div>
+  <div class="item-card" data-name="Flour"><img src="images/flour.jpg" alt="Flour"><span>Flour</span></div>
+  <div class="item-card" data-name="Sugar"><img src="images/sugar.jpg" alt="Sugar"><span>Sugar</span></div>
+  <div class="item-card" data-name="Salt"><img src="images/salt.jpg" alt="Salt"><span>Salt</span></div>
+  <div class="item-card" data-name="Pepper"><img src="images/pepper.jpg" alt="Pepper"><span>Pepper</span></div>
+  <div class="item-card" data-name="Oil"><img src="images/oil.webp" alt="Oil"><span>Oil</span></div>
+  <div class="item-card" data-name="Vinegar"><img src="images/vinegar.jpg" alt="Vinegar"><span>Vinegar</span></div>
+  <div class="item-card" data-name="Canned Beans"><img src="images/beans.jpg" alt="Canned Beans"><span>Canned Beans</span></div>
+  <div class="item-card" data-name="Tomato Sauce"><img src="images/tomato-sauce.jpg" alt="Tomato Sauce"><span>Tomato Sauce</span></div>
+
+  <!-- Snacks & Drinks -->
+  <div class="item-card" data-name="Juice"><img src="images/juice.jpg" alt="Juice"><span>Juice</span></div>
+  <div class="item-card" data-name="Coffee"><img src="images/coffee.jpg" alt="Coffee"><span>Coffee</span></div>
+  <div class="item-card" data-name="Tea"><img src="images/tea.jpg" alt="Tea"><span>Tea</span></div>
+  <div class="item-card" data-name="Soda"><img src="images/soda.jpg" alt="Soda"><span>Soda</span></div>
+  <div class="item-card" data-name="Chips"><img src="images/chips.jpg" alt="Chips"><span>Chips</span></div>
+  <div class="item-card" data-name="Cookies"><img src="images/cookies.jpg" alt="Cookies"><span>Cookies</span></div>
+  <div class="item-card" data-name="Chocolate"><img src="images/chocolate.jpg" alt="Chocolate"><span>Chocolate</span></div>
+  <div class="item-card" data-name="Water"><img src="images/water.jpg" alt="Water"><span>Water</span></div>
+
+  <!-- Household -->
+  <div class="item-card" data-name="Paper Towels"><img src="images/paper-towels.jpg" alt="Paper Towels"><span>Paper Towels</span></div>
+  <div class="item-card" data-name="Toilet Paper"><img src="images/toilet-paper.jpg" alt="Toilet Paper"><span>Toilet Paper</span></div>
+  <div class="item-card" data-name="Dish Soap"><img src="images/dish-soap.jpg" alt="Dish Soap"><span>Dish Soap</span></div>
+  <div class="item-card" data-name="Laundry Detergent"><img src="images/laundry.jpeg" alt="Laundry Detergent"><span>Laundry Detergent</span></div>
+  <div class="item-card" data-name="Sponges"><img src="images/sponges.webp" alt="Sponges"><span>Sponges</span></div>
+</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const userId = localStorage.getItem("userId");
+    const userName = localStorage.getItem("userName");
+
+    if (!userId) {
+      window.location.href = "/login.html";
+    } 
+
+    document.querySelector(".auth-area").innerHTML = `
+      <span class="muted">Welcome, ${userName}</span>
+      <button id="logoutBtn" class="btn small" style="margin-left: 12px;">Logout</button>
+    `;
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userName");
+      alert("You have been logged out.");
+      window.location.href = "login.html";
+    });
+
+    const itemNameInput = document.getElementById('itemName');
+    const qtyInput = document.getElementById('quantity');
+    const notesInput = document.getElementById('notes');
+    const addBtn = document.getElementById('addBtn');
+    const quickBuyBtn = document.getElementById('quickBuyBtn');
+    const list = document.querySelector('.grocery-list');
+    const historyList = document.querySelector('.history-list');
+    const recsContainer = document.getElementById('recommendations');
+
+    /* === Modal logic (Choose Item) === */
+    const itemModal = document.getElementById('itemModal');
+    const chooseItemBtn = document.getElementById('chooseItemBtn');
+    const modalCloseBtn = document.querySelector('.modal-close');
+
+    // === Search functionality inside modal ===
+const itemSearch = document.getElementById('itemSearch');
+itemSearch.addEventListener('input', () => {
+  const query = itemSearch.value.toLowerCase();
+  document.querySelectorAll('.item-card').forEach(card => {
+    const name = card.dataset.name.toLowerCase();
+    const visible = name.includes(query) || (query === '' && name === '');
+    card.style.display = visible ? 'flex' : 'none';
+  });
+});
+
+
+    chooseItemBtn.addEventListener('click', () => {
+      itemModal.style.display = 'flex';
+      itemModal.setAttribute('aria-hidden', 'false');
+    });
+    modalCloseBtn.addEventListener('click', () => {
+      itemModal.style.display = 'none';
+      itemModal.setAttribute('aria-hidden', 'true');
+    });
+    window.addEventListener('click', (e) => {
+      if (e.target === itemModal) {
+        itemModal.style.display = 'none';
+        itemModal.setAttribute('aria-hidden', 'true');
+      }
+    });
+    // Selecting an item from the modal
+    document.querySelectorAll('.item-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const name = card.dataset.name || '';
+        itemNameInput.value = name;   // if empty => manual "Other item"
+        itemNameInput.focus();
+        itemModal.style.display = 'none';
+        itemModal.setAttribute('aria-hidden', 'true');
+      });
+    });
+
+    async function loadGroceryItems() {
+      try {
+        const res = await fetch(`/api/items/${userId}`);
+        const items = await res.json();
+        list.innerHTML = '';
+
+        if (!Array.isArray(items) || items.length === 0) {
+          list.innerHTML = '<li class="muted">No items yet. Add your first one!</li>';
+          return;
+        }
+
+        items.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'gitem';
+          li.dataset.id = item.id;
+
+          const qtyText = item.quantity ? `Quantity: ${item.quantity}` : '';
+          const notesText = item.notes ? `Notes: ${item.notes}` : '';
+          const sep = (qtyText && notesText) ? ' | ' : '';
+
+          li.innerHTML = `
+            <div class="gleft">
+              <span class="gname">${item.item_name}</span>
+              <div class="details">${qtyText}${sep}${notesText}</div>
+            </div>
+            <div class="gactions">
+              <button class="icon-btn complete">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6L9 17l-5-5"></path>
+                </svg>
+              </button>
+              <button class="icon-btn delete">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                  <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          `;
+          list.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Error loading grocery items:', err);
+        list.innerHTML = '<li class="muted">Failed to load items.</li>';
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`/api/history/${userId}`);
+        const history = await res.json();
+        historyList.innerHTML = '';
+
+        if (!Array.isArray(history) || history.length === 0) {
+          historyList.innerHTML = '<li class="muted">No purchase history yet.</li>';
+          return;
+        }
+
+        history.forEach(entry => {
+          const li = document.createElement('li');
+          const date = new Date(entry.purchased_on).toLocaleDateString();
+          li.innerHTML = `
+            <div class="gleft">
+              <span class="gname">${entry.item_name}</span>
+              <div class="muted">${date}</div>
+            </div>
+          `;
+          historyList.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Error loading history:', err);
+        historyList.innerHTML = '<li class="muted">Failed to load history.</li>';
+      }
+    }
+
+    async function loadRecommendations() {
+      console.log('DEBUG: calling loadRecommendations, userId=', userId);
+      if (!userId) {
+        console.error('DEBUG: missing userId; skipping recommendations fetch');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/recommendations/${userId}`);
+        const recs = await res.json();
+        recsContainer.innerHTML = '';
+
+        if (!Array.isArray(recs) || recs.length === 0) {
+          recsContainer.innerHTML = '<p class="muted">No recommendations right now. Buy more items to get smarter suggestions!</p>';
+          return;
+        }
+
+        recs.forEach((rec, i) => {
+          const div = document.createElement('div');
+          div.className = 'rec';
+          div.innerHTML = `<strong>${i + 1}. ${rec.item_name}</strong>`;
+          recsContainer.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Error loading recommendations:', err);
+        recsContainer.innerHTML = '<p class="muted">Failed to load recommendations.</p>';
+      }
+    }
+
+    addBtn.addEventListener('click', async () => {
+      const itemName = itemNameInput.value.trim();
+      const quantity = qtyInput.value.trim();
+      const notes = notesInput.value.trim();
+
+      if (!itemName) return alert('Please enter an item name.');
+
+      try {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, item_name: itemName, quantity, notes })
+        });
+        if (!res.ok) throw new Error('Add failed');
+        itemNameInput.value = '';
+        qtyInput.value = '';
+        notesInput.value = '';
+        loadGroceryItems();
+      } catch (err) {
+        console.error('Error adding item:', err);
+        alert('Failed to add item.');
+      }
+    });
+
+    // Complete (kept exactly as in your version)
+    document.querySelector('.grocery-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.icon-btn.complete');
+      if (!btn) return;
+      const li = btn.closest('li.gitem');
+      const id = li?.dataset?.id;
+      if (!id) return alert('Complete error: missing item id.');
+
+      try {
+        const res = await fetch(`/api/items/${id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId })
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok || payload.ok === false) {
+          alert(`Failed to complete item${payload.error ? `: ${payload.error}` : ''}.`);
+          return;
+        }
+        await loadGroceryItems();
+        await loadHistory();
+      } catch (err) {
+        console.error('Complete error:', err);
+        alert('Complete error.');
+      }
+    });
+
+    // Quick Buy (unchanged)
+    quickBuyBtn.addEventListener('click', async () => {
+      const itemName = itemNameInput.value.trim();
+      if (!itemName) return alert('Type an item name for Quick Buy.');
+
+      try {
+        const res = await fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, item_name: itemName })
+        });
+        if (!res.ok) throw new Error('Quick Buy failed.');
+        itemNameInput.value = '';
+        qtyInput.value = '';
+        notesInput.value = '';
+        loadHistory();
+      } catch (err) {
+        console.error('Quick Buy error:', err);
+        alert('Quick Buy error.');
+      }
+    });
+
+    // Delete (kept exactly as in your version)
+    document.querySelector('.grocery-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.icon-btn.delete');
+      if (!btn) return;
+      const li = btn.closest('li.gitem');
+      const id = li?.dataset?.id;
+      if (!id) return alert('Delete error: missing item id.');
+      if (!confirm('Delete this item?')) return;
+
+      try {
+        const res = await fetch(`/api/items/${id}?userId=${userId}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(`Failed to delete item${err.error ? `: ${err.error}` : ''}.`);
+          return;
+        }
+        await loadGroceryItems();
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('Delete error.');
+      }
+    });
+
+    loadGroceryItems();
+    loadHistory();
+    loadRecommendations(); // Load recommendations on page load
+  </script>
+</body>
+</html>

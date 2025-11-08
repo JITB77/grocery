@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register | Smart Grocery List</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="card" style="max-width: 400px; margin: 80px auto;">
+      <h2>Register</h2>
+      <div class="form-row">
+        <input id="regName" type="text" placeholder="Full Name" required />
+        <input id="regEmail" type="email" placeholder="Email" required />
+        <input id="regPassword" type="password" placeholder="Password" required />
+      </div>
+      <div class="btn-row">
+        <button id="registerBtn" type="button" class="btn primary">Create Account</button>
+        <button id="backToLoginBtn" type="button" class="btn">Back to Login</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const name = document.getElementById("regName").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+
+      if (!name || !email || !password) {
+        alert("Please fill out all fields.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Registration failed.");
+          return;
+        }
+
+        alert("Registration successful! You can now log in.");
+        window.location.href = "login.html";
+      } catch (error) {
+        console.error("Registration error:", error);
+        alert("Server error during registration.");
+      }
+    });
+
+    document.getElementById("backToLoginBtn").addEventListener("click", () => {
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
+
+

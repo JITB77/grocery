@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | Smart Grocery List</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="card" style="max-width: 400px; margin: 80px auto;">
+      <h2>Login</h2>
+      <div class="form-row">
+        <input id="loginEmail" type="email" placeholder="Email" required />
+        <input id="loginPassword" type="password" placeholder="Password" required />
+      </div>
+      <div class="btn-row">
+        <button id="loginBtn" type="button" class="btn primary">Login</button>
+        <button id="registerBtn" type="button" class="btn">Register</button>
+      </div>
+      <p class="muted" style="margin-top: 20px;">Example: abai@example.com / 1234</p>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+
+      if (!email || !password) {
+        alert("Please enter both email and password.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Login failed.");
+          return;
+        }
+
+        localStorage.setItem("userId", data.id);
+        localStorage.setItem("userName", data.name);
+
+        alert(`Welcome back, ${data.name}!`);
+        window.location.href = "index.html"; // redirect to main grocery page
+      } catch (error) {
+        console.error("Login error:", error);
+        alert("Server error during login.");
+      }
+    });
+
+    // Redirect to register page
+    document.getElementById("registerBtn").addEventListener("click", () => {
+      window.location.href = "register.html";
+    });
+  </script>
+</body>
+</html>
